@@ -1,8 +1,8 @@
-#ifndef __MY_LIST_H__
-#define __MY_LIST_H__
+#ifndef __MY_LIST_HPP__
+#define __MY_LIST_HPP__
 
 #include "Node.hpp"
-#include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <stdexcept>
 
@@ -13,12 +13,10 @@ class List {
         size_t m_size;
 
         //methods
-        void displayNode(Node<T> *currentNode) const;
+        void displayNode(Node<T> *crrentNode) const;
         bool searchNode(Node<T>* someNode) const;
-        void deleteNode(const Node<T> *target);
         bool is_empty() const;
         Node<T>* find_previous_and_next_node(const int position) const;
-        size_t find_position(Node<T>* myNode);
 
     public:
         //constructor && destructor.
@@ -28,10 +26,12 @@ class List {
 
         //methods
         void insert(const T value);
-        void insert(const T value, const unsigned int position);
-        void delete_value(const T value);
-        void delete_value(const unsigned int position);
-        void displayList() const ;
+        void insert(const T value,const unsigned int position);
+        void delete_node(const T value);
+        void delete_node_in_position(const unsigned int position);
+        void concat(List<T>* MyList);
+        void supprimer_doublon();
+        void displayList() const;
         unsigned int getSize() const;
         bool find_value(const T value) const;
 };
@@ -44,21 +44,19 @@ class List {
 
 // constructors
 template<typename T>
-List<T>::List() : m_root(nullptr),m_size(0) {
+List<T>::List() : m_root(nullptr), m_size(0) {
 
-    std::cout << "m_root = " << m_root << "\n";
-    std::cout << "---------OBJET CREER--------\n";
+    std::cout << "\t\tm_root = " << m_root << "\n";
+    std::cout << "\t\t---------OBJET CREER--------\n";
 }
 //
 template<typename T>
 List<T>::List(const T value) : m_size(1) {
 
-    m_root = new Node<T>();
-    m_root->value = value;
-    m_root->Next = nullptr;
+    m_root = create_Node(value);
 
-    std::cout << "m_root = " << m_root << "\n";
-    std::cout << "---------OBJET CREER--------\n";
+    std::cout << "\t\tm_root = " << m_root << "\n";
+    std::cout << "\t\t---------OBJET CREER--------\n";
 }
 //destructor.
 template<typename T>
@@ -66,13 +64,14 @@ List<T>::~List<T>() {
 
 //    Node<T>* currentNode = m_root;
     Node<T>* tmp = nullptr;
-
+    std::cout << "\n\t\tm_root = " << m_root << "\n";
     while (m_root != nullptr) {
         tmp = m_root->Next;
         delete m_root;
         m_root = tmp;
     }
-    std::cout << "---------OBJET DETRUIT--------\n";
+    m_size = 0;
+    std::cout << "\t\t---------OBJET DETRUIT------\n";
 }
 
 //METHODS-----------------------------
@@ -80,9 +79,7 @@ List<T>::~List<T>() {
 template<typename T>
 void List<T>::insert(const T value) {
 
-    Node<T>* newNode = new Node<T>();
-    newNode->value = value;
-    newNode->Next = nullptr;
+    Node<T>* newNode = create_Node(value);
 
     if (is_empty()) {
         m_root = newNode;
@@ -105,8 +102,7 @@ void List<T>::insert(const T value, const unsigned int position) {
         throw std::length_error("La position entrer n'est pas valide");
     }
 
-    Node<T> *newNode = new Node<T>();
-    newNode->value = value;
+    Node<T> *newNode = create_Node(value);
 
     if (position == 1) {
 
@@ -118,60 +114,128 @@ void List<T>::insert(const T value, const unsigned int position) {
 
         Node<T> *previousNode = find_previous_and_next_node(position - 1);
 
+        //Node<T>* previousNode = nullptr;
+
         if (static_cast<size_t>(position) < m_size) {
             newNode->Next = previousNode->Next;
             previousNode->Next = newNode;
         }
+        int i = 0;
     }
     m_size += 1;
 }
 //
 
 template<typename T>
-void List<T>::delete_value(const T value) {
+void List<T>::delete_node(const T value) {
 
     if (is_empty()) {
-        std::cout << "la liste est vide.\n";
+        std::runtime_error("la liste est vide.\n");
     } else if (!find_value(value)) {
-        std::cout << "l'element n'est pas dans la liste.\n";
+        throw std::runtime_error("La valeur saisie n'existe pas dans la liste.\n");
     } else {
-        Node<T>* newNode = new Node<T>();
-        newNode->value = value;
+        Node<T>* tmp_root = m_root;
+        Node<T>* previousNode = nullptr;
 
-        size_t position = find_position(newNode);
-        Node<T>* previousNode = find_previous_and_next_node(position - 1);
-
-        previousNode->Next = newNode->Next;
-        delete newNode;
+        while (tmp_root != nullptr) {
+            if (tmp_root->value == value) {
+                if (previousNode == nullptr)
+                    m_root = tmp_root->Next;
+                else
+                    previousNode->Next = tmp_root->Next;
+                delete tmp_root;
+            }
+            previousNode = tmp_root;
+            tmp_root = tmp_root->Next;
+        }
+        m_size -= 1;
     }
 }
 
 //
 template<typename T>
-void List<T>::delete_value(const unsigned int position) {
+void List<T>::delete_node_in_position(const unsigned int position) {
 
-    Node<T>* previousNode = find_previous_and_next_node(position - 1);
-    Node<T>* currentNode = find_previous_and_next_node(position);
+    if (position < 1 || position > m_size)
+        throw std::out_of_range("Position invalide.\n");
 
-    previousNode->Next = currentNode->Next;
-    delete currentNode;
-    m_size -= 1;
+    if (is_empty()) {
+        throw std::runtime_error("la liste est vide.\n");
+    } else if (position == 1){
+        Node<T>* tmp = m_root;
+        m_root = m_root->Next;
+        delete tmp;
+        m_size--;
+    } else {
+        int i = 1;
+        Node<T>* tmp_root = m_root;
+        Node<T>* previousNode = nullptr;
+
+        while (i < position) {
+            previousNode = tmp_root;
+            tmp_root = tmp_root->Next;
+            i++;
+        }
+        previousNode->Next = tmp_root->Next;
+        delete tmp_root;
+        m_size--;
+    }
 }
 //
 template<typename T>
-void List<T>::displayList() const {
-    displayNode(m_root);
+void List<T>::concat(List<T>* MyList) {
+    Node<T>* tmp_root = MyList->m_root;
+
+    while (tmp_root != nullptr) {
+        insert(tmp_root->value);
+        tmp_root = tmp_root->Next;
+    }
 }
 //
+template<typename T>
+void List<T>::supprimer_doublon() {
+    if (is_empty()) {
+        std::cerr << "\nLa liste est vide.\n";
+        return;
+    } else if (m_size == 1) 
+        return;
+
+    //[2]->[6]->[5]->[1]->[2]->[1]->[7]->[6]->[3]->[10]->[5]->0X00
+    Node<T>* fixNode = m_root;
+    Node<T>* mobileNode = nullptr;
+    unsigned int positionFix = 1;
+    unsigned int positionMobile = 0;
+
+    while (fixNode != nullptr) {
+        mobileNode = fixNode->Next;
+        positionMobile = positionFix + 1;
+
+        while (mobileNode != nullptr) {
+
+            if (mobileNode->value == fixNode->value) {
+                delete_node_in_position(positionMobile);
+            }
+            mobileNode = mobileNode->Next;
+            positionMobile++;
+        }
+        fixNode = fixNode->Next;
+        positionFix++;
+    }
+}
+
+template<typename T>
+void List<T>::displayList() const {
+    Node<T>* tmp = m_root;
+    std::cout << "\n";
+    displayNode(tmp);
+    std::cout << "\n-----size = " << m_size << "\n";
+}
+//
+
 template<typename T>
 bool List<T>::find_value(const T value) const {
 
-    Node<T>* someNode = new Node<T>();
-
-    someNode->value = value;
-    someNode->Next = nullptr;
-
-    return searchNode(someNode);
+    return searchNode(create_Node(value));
 }
 
 ////////////////////////////////////////////////////
@@ -187,13 +251,13 @@ bool List<T>::is_empty() const {
 //
 template<typename T>
 void List<T>::displayNode(Node<T>* currentNode) const {
-
     if (currentNode == nullptr) {
         std::cout << "0x000\n";
     } else {
         std::cout << "[" << currentNode->value << "]->";
         displayNode(currentNode->Next);
     }
+
 }
 //
 
@@ -236,20 +300,6 @@ Node<T>* List<T>::find_previous_and_next_node(const int position) const {
 }
 
 //
-template<typename T>
-size_t List<T>::find_position(Node<T>* myNode) {
 
-    Node<T>* tmp = m_root;
-    size_t npos = 1;
-
-    while (tmp != nullptr) {
-        if (tmp->value == myNode->value) {
-            return npos;
-        }
-        npos++;
-        tmp = tmp->Next;
-    }
-    return SIZE_MAX;
-}
 
 #endif
